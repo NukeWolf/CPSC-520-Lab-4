@@ -1102,6 +1102,11 @@ module parc_CoreCtrl
     .msg ( ir_Dhl )
   );
 
+  parc_InstMsgDisasm inst_msg_disasm_I
+  (
+    .msg ( ir_Ihl )
+  );
+
   parc_InstMsgDisasm inst_msg_disasm_X
   (
     .msg ( ir_Xhl )
