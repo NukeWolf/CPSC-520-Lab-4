@@ -583,7 +583,7 @@ module parc_CoreCtrl
 
   // Aggregate Stall Signal
 
-  wire stall_spec_Dhl = inst_val_Ihl && branch_inst_Ihl;
+  wire stall_spec_Dhl = 0;
 
   assign non_sb_stall_Dhl = ( stall_Ihl ||
                        stall_spec_Dhl ||
@@ -662,7 +662,7 @@ module parc_CoreCtrl
 
   // Dummy squash signal
 
-  wire squash_Ihl = 1'b0;
+  wire squash_Ihl = (inst_val_Xhl && brj_taken_Xhl );
 
   // Stall Signal
 
@@ -774,6 +774,7 @@ module parc_CoreCtrl
    ||   bltz_taken_Xhl
    ||   bgez_taken_Xhl );
 
+  wire branch_inst_Xhl = (br_sel_Xhl != br_none);
   wire brj_taken_Xhl = ( inst_val_Xhl && any_br_taken_Xhl );
 
   // Dummy Squash Signal
@@ -1062,8 +1063,13 @@ module parc_CoreCtrl
     .rob_alloc_req_preg        (rf_waddr_Dhl),
     .rob_alloc_resp_slot       (rob_fill_slot_Dhl),
     .rob_alloc_spec            (rob_alloc_speculative),
+
     .rob_fill_val              (rob_fill_wen_Whl),
     .rob_fill_slot             (rob_fill_slot_Whl),
+
+    .rob_spec_resolved         (branch_inst_Xhl),
+    .rob_spec_br_taken         (brj_taken_Xhl),
+
     .rob_commit_slot           (rob_commit_slot_Chl),
     .rob_commit_wen            (rob_commit_wen_Chl),
     .rob_commit_rf_waddr       (rob_commit_waddr_Chl)

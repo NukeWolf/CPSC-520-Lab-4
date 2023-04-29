@@ -20,6 +20,9 @@ module parc_CoreReorderBuffer
   input         rob_fill_val,
   input  [ 3:0] rob_fill_slot,
 
+  input         rob_spec_resolved,
+  input         rob_spec_br_taken,
+
   output        rob_commit_wen,
   output [ 3:0] rob_commit_slot,
   output [ 4:0] rob_commit_rf_waddr
@@ -64,7 +67,23 @@ module parc_CoreReorderBuffer
         rob_head <= rob_head + 1;
         rob_table[rob_head] <= 8'b0;
       end
-
+      if(rob_spec_resolved)
+      begin
+        for (integer i = 0; i < 16; i = i + 1 )
+        begin
+          if(rob_table[i][`ROB_SPEC] == 1)
+          begin
+            if(rob_spec_br_taken)begin
+              rob_tail <= i;
+              rob_table[i] <= 8'b0;
+            end
+            else 
+            begin
+              rob_table[i][`ROB_SPEC] <= 0;
+            end
+          end
+        end
+      end
     end
   end
 
@@ -91,7 +110,7 @@ module parc_CoreReorderBuffer
   wire [7:0] rob_table_9 = rob_table[9];
 
 
-  
+
 endmodule
 
 `endif
