@@ -21,7 +21,7 @@ module parc_CoreScoreboard
   input         dst_en,           // Write to destination register
   input  [ 2:0] func_unit,        // Functional Unit
   input  [ 5:0] latency,          // Instruction latency (one-hot)
-  input         inst_val_Dhl,     // Instruction valid
+  input         inst_val_Ihl,     // Instruction valid
   input         non_sb_stall_Dhl, // Decode stall
 
   input  [ 3:0] rob_alloc_slot,   // ROB slot allocated to dst reg
@@ -51,7 +51,7 @@ module parc_CoreScoreboard
   // Store ROB slots (for bypassing)
 
   always @(posedge clk) begin
-    if( accept ) begin
+    if( accept && dst_en ) begin
       reg_rob_slot[dst] <= rob_alloc_slot;
     end
   end
@@ -64,7 +64,7 @@ module parc_CoreScoreboard
   wire src0_can_byp = pending[src0] && (reg_latency[src0] < 6'b000100);
   wire src1_can_byp = pending[src1] && (reg_latency[src1] < 6'b000100);
 
-  wire src0_ok = !pending[src0] || src0_can_byp || !src0_en;
+  wire src0_ok = !pending[src0] || src0_can_byp || !src0_en;  // not pending; calculated, not written; not used
   wire src1_ok = !pending[src1] || src1_can_byp || !src1_en;
 
   reg [2:0] src0_byp_mux_sel;
@@ -94,7 +94,7 @@ module parc_CoreScoreboard
       src1_byp_mux_sel = functional_unit[src1];
   end
 
-  // Check for hazards
+  // Check for hazards -- avoid multiple write back same cycle
 
   wire stall_wb_hazard =
     ((wb_alu_latency >> 1) & latency) > 6'b0 ? 1'b1 :
@@ -102,7 +102,7 @@ module parc_CoreScoreboard
     ((wb_mul_latency >> 1) & latency) > 6'b0 ? 1'b1 : 1'b0;
 
   wire accept =
-    src0_ok && src1_ok && !stall_wb_hazard && inst_val_Dhl && !non_sb_stall_Dhl;
+    src0_ok && src1_ok && !stall_wb_hazard && inst_val_Ihl;// && !non_sb_stall_Dhl;
 
   wire stall_hazard = ~accept;
   
@@ -137,12 +137,12 @@ module parc_CoreScoreboard
   always @(posedge clk) begin
     if (reset) begin
       wb_alu_latency <= 6'b0;
-    end else if (accept && (func_unit == 2'd1)) begin
+    end else if (accept && (func_unit == 2'd1)) begin // add new thing
       wb_alu_latency <= 
         (wb_alu_latency & stalls) |
         ((wb_alu_latency & ~stalls) >> 1) |
         latency;
-    end else begin
+    end else begin                                    // update old things
       wb_alu_latency <= 
         (wb_alu_latency & stalls) |
         ((wb_alu_latency & ~stalls) >> 1);

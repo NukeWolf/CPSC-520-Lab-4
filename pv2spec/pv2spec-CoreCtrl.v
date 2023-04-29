@@ -523,55 +523,54 @@ module parc_CoreCtrl
       (cs[`PARC_INST_MSG_MEM_REQ]   != nr)   ? 3'd2 :
                                                3'd1;
   end
+
+  // wire [5:0] stalls_combined = {
+  //   stall_Ihl,
+  //   stall_Xhl,
+  //   stall_Mhl,
+  //   1'b0,
+  //   1'b0,
+  //   stall_Whl};
+
+  // wire       stall_sb_Dhl;
+  wire       non_sb_stall_Dhl;  // keep, tentative
+  // wire [1:0] wb_mux_sel_Whl;  // good
+
+  // wire [3:0] rob_fill_slot_Dhl; // add Ihl
+
+  // wire [3:0] op0_byp_rob_slot_Dhl;  // figure out how to change these
+  // wire [3:0] op1_byp_rob_slot_Dhl;
+
+  // parc_CoreScoreboard scoreboard
+  // (
+  //   .clk                 (clk),
+  //   .reset               (reset),
+  //   .src0                (rs),                  // need Ihl
+  //   .src0_en             (rs_en_Dhl),           // need Ihl
+  //   .src1                (rt),                  // need Ihl
+  //   .src1_en             (rt_en_Dhl),           // need Ihl
+  //   .dst                 (rf_waddr_Dhl),        // need Ihl
+  //   .dst_en              (rf_wen_Dhl),          // need Ihl
+  //   .latency             (inst_latency_Dhl),    // need Ihl
+  //   .func_unit           (inst_func_unit_Dhl),  // need Ihl
+  //   .inst_val_Dhl        (inst_val_Dhl),        // --> may not need? --> to Ihl
+  //   .non_sb_stall_Dhl    (non_sb_stall_Dhl),    // + --> might not even be used
+
+  //   .rob_alloc_slot      (rob_fill_slot_Dhl),   // to Ihl
+  //   .rob_commit_slot     (rob_commit_slot_Chl), // +
+  //   .rob_commit_wen      (rob_commit_wen_Chl),  // +
+
+  //   .stalls              (stalls_combined),     // +
+
+  //   .src0_byp_mux_sel    (op0_byp_mux_sel_Dhl), // output, correct? --> check how it's calculated
+  //   .src0_byp_rob_slot   (op0_byp_rob_slot_Dhl),
     
-  wire [5:0] stalls_combined = {
-    stall_Ihl,
-    stall_Xhl,
-    stall_Mhl,
-    1'b0,
-    1'b0,
-    stall_Whl};
+  //   .src1_byp_mux_sel    (op1_byp_mux_sel_Dhl), // output, correct?
+  //   .src1_byp_rob_slot   (op1_byp_rob_slot_Dhl),
 
-  wire       stall_sb_Dhl;
-  wire       non_sb_stall_Dhl;
-  wire [1:0] wb_mux_sel_Whl;
-
-  wire [3:0] rob_fill_slot_Dhl;
-
-  wire [3:0] op0_byp_rob_slot_Dhl;
-  wire [3:0] op1_byp_rob_slot_Dhl;
-
-  parc_CoreScoreboard scoreboard
-  (
-    .clk                 (clk),
-    .reset               (reset),
-    .src0                (rs),
-    .src0_en             (rs_en_Dhl),
-    .src1                (rt),
-    .src1_en             (rt_en_Dhl),
-    .dst                 (rf_waddr_Dhl),
-    .dst_en              (rf_wen_Dhl),
-    .latency             (inst_latency_Dhl),
-    .func_unit           (inst_func_unit_Dhl), 
-    .inst_val_Dhl        (inst_val_Dhl),
-    .non_sb_stall_Dhl    (non_sb_stall_Dhl),
-
-    .rob_alloc_slot      (rob_fill_slot_Dhl),
-    .rob_commit_slot     (rob_commit_slot_Chl),
-    .rob_commit_wen      (rob_commit_wen_Chl),
-
-    .stalls              (stalls_combined),
-
-    .src0_byp_mux_sel    (op0_byp_mux_sel_Dhl),
-    .src0_byp_rob_slot   (op0_byp_rob_slot_Dhl),
-    
-
-    .src1_byp_mux_sel    (op1_byp_mux_sel_Dhl),
-    .src1_byp_rob_slot   (op1_byp_rob_slot_Dhl),
-
-    .stall_hazard        (stall_sb_Dhl),
-    .wb_mux_sel          (wb_mux_sel_Whl)
-  );
+  //   .stall_hazard        (stall_sb_Dhl),        // + --> check how it's calculated --> calculated by whether you accept or not
+  //   .wb_mux_sel          (wb_mux_sel_Whl)       // +
+  // );
 
   //----------------------------------------------------------------------
   // Squash and Stall Logic
@@ -589,7 +588,7 @@ module parc_CoreCtrl
                        stall_spec_Dhl ||
                       (inst_val_Dhl && !rob_req_rdy_Dhl));
 
-  assign stall_Dhl = non_sb_stall_Dhl || (inst_val_Dhl && stall_sb_Dhl );
+  assign stall_Dhl = non_sb_stall_Dhl || (inst_val_Dhl && (stall_sb_Dhl && inst_val_Ihl));
 
   // Next bubble bit
 
@@ -650,6 +649,13 @@ module parc_CoreCtrl
       cp0_addr_Ihl         <= cp0_addr_Dhl;
 
       bubble_Ihl           <= bubble_next_Dhl;
+
+      inst_rs_Ihl          <= inst_rs_Dhl;
+      rs_en_Ihl            <= rs_en_Dhl;
+      inst_rt_Ihl          <= inst_rt_Dhl;
+      rt_en_Ihl            <= rt_en_Dhl;
+      inst_latency_Ihl     <= inst_latency_Dhl;
+      inst_func_unit_Ihl   <= inst_func_unit_Dhl;
     end
 
   end
@@ -674,6 +680,68 @@ module parc_CoreCtrl
   wire bubble_next_Ihl = ( !bubble_sel_Ihl ) ? bubble_Ihl
                        : ( bubble_sel_Ihl )  ? 1'b1
                        :                       1'bx;
+
+  //----------------------------------------------------------------------
+  // Scoreboard
+  //----------------------------------------------------------------------
+
+  reg [4:0] inst_rs_Ihl;
+  reg       rs_en_Ihl;
+  reg [4:0] inst_rt_Ihl;
+  reg       rt_en_Ihl;
+
+  reg [5:0] inst_latency_Ihl;
+  reg [2:0] inst_func_unit_Ihl;
+
+
+  wire [5:0] stalls_combined = {
+    stall_Ihl,
+    stall_Xhl,
+    stall_Mhl,
+    1'b0,
+    1'b0,
+    stall_Whl};
+
+  wire       stall_sb_Dhl;
+  // wire       non_sb_stall_Dhl;  // keep, tentative
+  wire [1:0] wb_mux_sel_Whl;  // good
+
+  wire [3:0] rob_fill_slot_Dhl;
+
+  wire [3:0] op0_byp_rob_slot_Dhl;  // figure out how to change these
+  wire [3:0] op1_byp_rob_slot_Dhl;
+
+  parc_CoreScoreboard scoreboard
+  (
+    .clk                 (clk),
+    .reset               (reset),
+    .src0                (inst_rs_Ihl),         // need Ihl ++
+    .src0_en             (rs_en_Ihl),           // need Ihl ++
+    .src1                (inst_rs_Ihl),         // need Ihl ++
+    .src1_en             (rt_en_Ihl),           // need Ihl ++
+    .dst                 (rf_waddr_Ihl),        // need Ihl +
+    .dst_en              (rf_wen_Ihl),          // need Ihl +
+    .latency             (inst_latency_Ihl),    // need Ihl ++
+    .func_unit           (inst_func_unit_Ihl),  // need Ihl ++
+    .inst_val_Ihl        (inst_val_Ihl),        // --> may not need? --> to Ihl
+    .non_sb_stall_Dhl    (non_sb_stall_Dhl),    // + --> might not even be used
+
+    .rob_alloc_slot      (rob_fill_slot_Ihl),   // to Ihl   +
+    .rob_commit_slot     (rob_commit_slot_Chl), // +
+    .rob_commit_wen      (rob_commit_wen_Chl),  // +
+
+    .stalls              (stalls_combined),     // +
+
+    .src0_byp_mux_sel    (op0_byp_mux_sel_Dhl), // output, correct? --> check how it's calculated --> i think it's actually okay 
+    .src0_byp_rob_slot   (op0_byp_rob_slot_Dhl),
+    
+    .src1_byp_mux_sel    (op1_byp_mux_sel_Dhl), // output, correct?
+    .src1_byp_rob_slot   (op1_byp_rob_slot_Dhl),
+
+    .stall_hazard        (stall_sb_Dhl),        // + --> check how it's calculated --> calculated by whether you accept or not
+    .wb_mux_sel          (wb_mux_sel_Whl)       // +
+  );
+
 
   //----------------------------------------------------------------------
   // X <- I
