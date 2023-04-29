@@ -14,6 +14,9 @@ module parc_CoreReorderBuffer
   output        rob_alloc_req_rdy,
   input  [ 4:0] rob_alloc_req_preg,
   output [ 3:0] rob_alloc_resp_slot,
+  input         rob_alloc_spec,
+
+
   input         rob_fill_val,
   input  [ 3:0] rob_fill_slot,
 
@@ -47,7 +50,10 @@ module parc_CoreReorderBuffer
       if(rob_alloc_req_val && rob_alloc_req_rdy)
       begin
         rob_tail <= rob_tail + 1;
-        rob_table[rob_tail] <= {1'b0, 1'b1, 1'b1, rob_alloc_req_preg};
+        rob_table[rob_tail][`ROB_VALID] <= 1;
+        rob_table[rob_tail][`ROB_PENDING] <= 1;
+        rob_table[rob_tail][`ROB_REGISTER] <= rob_alloc_req_preg;
+        rob_table[rob_tail][`ROB_SPEC] <= rob_alloc_spec;
       end
       if(rob_fill_val)
       begin
@@ -74,6 +80,17 @@ module parc_CoreReorderBuffer
 
   //DEBUG
   wire [7:0] rob_table_0 = rob_table[0];
+  wire [7:0] rob_table_1 = rob_table[1];
+  wire [7:0] rob_table_2 = rob_table[2];
+  wire [7:0] rob_table_3 = rob_table[3];
+  wire [7:0] rob_table_4 = rob_table[4];
+  wire [7:0] rob_table_5 = rob_table[5];
+  wire [7:0] rob_table_6 = rob_table[6];
+  wire [7:0] rob_table_7 = rob_table[7];
+  wire [7:0] rob_table_8 = rob_table[8];
+  wire [7:0] rob_table_9 = rob_table[9];
+
+
   
 endmodule
 

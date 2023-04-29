@@ -583,7 +583,7 @@ module parc_CoreCtrl
 
   // Aggregate Stall Signal
 
-  wire stall_spec_Dhl = inst_val_Ihl && (br_sel_Ihl != br_none);
+  wire stall_spec_Dhl = inst_val_Ihl && branch_inst_Ihl;
 
   assign non_sb_stall_Dhl = ( stall_Ihl ||
                        stall_spec_Dhl ||
@@ -657,6 +657,8 @@ module parc_CoreCtrl
   // Is the current stage valid?
 
   wire inst_val_Ihl = ( !bubble_Ihl && !squash_Ihl );
+
+  wire branch_inst_Ihl = (br_sel_Ihl != br_none);
 
   // Dummy squash signal
 
@@ -1040,9 +1042,12 @@ module parc_CoreCtrl
   wire rob_req_val_Dhl = inst_val_Dhl && !stall_Dhl && rf_wen_Dhl;
   wire rob_fill_val = inst_val_Whl && rf_wen_Whl;
 
+  wire rob_alloc_speculative = inst_val_Ihl && branch_inst_Ihl;
+
   wire rob_req_rdy_Dhl;
 
   wire       rob_fill_wen_Whl = inst_val_Whl && rf_wen_Whl;
+
 
   wire [3:0] rob_commit_slot_Chl;
   wire       rob_commit_wen_Chl;
@@ -1056,11 +1061,13 @@ module parc_CoreCtrl
     .rob_alloc_req_rdy         (rob_req_rdy_Dhl),
     .rob_alloc_req_preg        (rf_waddr_Dhl),
     .rob_alloc_resp_slot       (rob_fill_slot_Dhl),
+    .rob_alloc_spec            (rob_alloc_speculative),
     .rob_fill_val              (rob_fill_wen_Whl),
     .rob_fill_slot             (rob_fill_slot_Whl),
     .rob_commit_slot           (rob_commit_slot_Chl),
     .rob_commit_wen            (rob_commit_wen_Chl),
     .rob_commit_rf_waddr       (rob_commit_waddr_Chl)
+    
   );
 
   //----------------------------------------------------------------------
