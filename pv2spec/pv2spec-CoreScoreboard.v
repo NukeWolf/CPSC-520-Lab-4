@@ -13,6 +13,8 @@ module parc_CoreScoreboard
 (
   input         clk,
   input         reset,
+
+
   input  [ 4:0] src0,             // Source register 0
   input         src0_en,          // Use source register 0
   input  [ 4:0] src1,             // Source register 1
@@ -21,6 +23,7 @@ module parc_CoreScoreboard
   input         dst_en,           // Write to destination register
   input  [ 2:0] func_unit,        // Functional Unit
   input  [ 4:0] latency,          // Instruction latency (one-hot)
+  input         inst_val_Dhl,     // Instruction valid
   input         inst_val_Ihl,     // Instruction valid
   input         non_sb_stall_Dhl, // Decode stall
 
@@ -30,12 +33,18 @@ module parc_CoreScoreboard
 
   input  [ 4:0] stalls,           // Input stall signals
 
+  // Make sure to use Decode instructions to check for bypassing, rather than Issue src0 and src1.
+  input  [ 4:0] src0_byp_Dhl,
+  input  [ 4:0] src1_byp_Dhl,
+  input         src0_byp_en_Dhl,
+  input         src1_byp_en_Dhl,
   output [ 2:0] src0_byp_mux_sel, // Source reg 0 byp mux
   output [ 3:0] src0_byp_rob_slot,// Source reg 0 ROB slot
   output [ 2:0] src1_byp_mux_sel, // Source reg 1 byp mux
   output [ 3:0] src1_byp_rob_slot,// Source reg 1 ROB slot
 
-  output        stall_hazard,     // Destination register ready
+  output        stall_hazard_Ihl,     // Destination register ready
+  output        stall_hazard_Dhl,
   output [ 1:0] wb_mux_sel        // Writeback mux sel out
 );
 
@@ -56,8 +65,8 @@ module parc_CoreScoreboard
     end
   end
 
-  wire src0_byp_rob_slot = reg_rob_slot[src0];
-  wire src1_byp_rob_slot = reg_rob_slot[src1];
+  wire src0_byp_rob_slot = reg_rob_slot[src0_byp_Dhl];
+  wire src1_byp_rob_slot = reg_rob_slot[src1_byp_Dhl];
 
   // Check if src registers are ready
 
@@ -67,31 +76,42 @@ module parc_CoreScoreboard
   wire src0_ok = !pending[src0] || src0_can_byp || !src0_en;  // not pending; calculated, not written; not used
   wire src1_ok = !pending[src1] || src1_can_byp || !src1_en;
 
+
+
+  wire src0_can_byp_Dhl = pending[src0_byp_Dhl] && (reg_latency[src0_byp_Dhl] < 5'b00100);
+  wire src1_can_byp_Dhl = pending[src1_byp_Dhl] && (reg_latency[src1_byp_Dhl] < 5'b00100);
+
+  wire src0_byp_ok_Dhl = !pending[src0_byp_Dhl] || src0_can_byp_Dhl || !src0_byp_en_Dhl; 
+  wire src1_byp_ok_Dhl = !pending[src1_byp_Dhl] || src1_can_byp_Dhl || !src1_byp_en_Dhl;
+
+
   reg [2:0] src0_byp_mux_sel;
   reg [2:0] src1_byp_mux_sel;
+  
+  wire [2:0] func_unit_debug = functional_unit[src0];
 
   always @(*) begin
-    if (!pending[src0] || src0 == 5'b0)
+    if (!pending[src0_byp_Dhl] || src0_byp_Dhl == 5'b0)
       src0_byp_mux_sel = 3'b0;
-    else if (reg_latency[src0] == 5'b00001)
+    else if (reg_latency[src0_byp_Dhl] == 5'b00001)
       src0_byp_mux_sel = 3'd4;
-    else if (reg_latency[src0] == 5'b00000)
+    else if (reg_latency[src0_byp_Dhl] == 5'b00000)
       src0_byp_mux_sel = 3'd5; // UNCOMMENT THIS WHEN YOUR ROB IS READY!
       // src0_byp_mux_sel = 3'd0;   // DELETE THIS WHEN YOUR ROB IS READY!
     else
-      src0_byp_mux_sel = functional_unit[src0];
+      src0_byp_mux_sel = functional_unit[src0_byp_Dhl];
   end
 
   always @(*) begin
-    if (!pending[src1] || src1 == 5'b0)
+    if (!pending[src1_byp_Dhl] || src1_byp_Dhl == 5'b0)
       src1_byp_mux_sel = 3'b0;
-    else if (reg_latency[src1] == 5'b00001)
+    else if (reg_latency[src1_byp_Dhl] == 5'b00001)
       src1_byp_mux_sel = 3'd4;
-    else if (reg_latency[src1] == 5'b00000)
+    else if (reg_latency[src1_byp_Dhl] == 5'b00000)
       src1_byp_mux_sel = 3'd5; // UNCOMMENT THIS WHEN YOUR ROB IS READY!
       // src1_byp_mux_sel = 3'd0;   // DELETE THIS WHEN YOUR ROB IS READY!
     else
-      src1_byp_mux_sel = functional_unit[src1];
+      src1_byp_mux_sel = functional_unit[src1_byp_Dhl];
   end
 
   // Check for hazards -- avoid multiple write back same cycle
@@ -104,7 +124,10 @@ module parc_CoreScoreboard
   wire accept =
     src0_ok && src1_ok && !stall_wb_hazard && inst_val_Ihl;// && !non_sb_stall_Dhl;
 
-  wire stall_hazard = ~accept;
+  wire stall_hazard_Ihl = ~accept;
+
+  wire stall_hazard_Dhl = ~(src0_byp_ok_Dhl && src1_byp_ok_Dhl && inst_val_Dhl);
+  
   
   // Advance one cycle
   
@@ -117,6 +140,8 @@ module parc_CoreScoreboard
         reg_latency[r]     <= 5'b0;
         pending[r]         <= 1'b0;
         functional_unit[r] <= 3'b0; 
+        src0_byp_mux_sel <= 0;
+        src1_byp_mux_sel <= 0;
       end else if ( accept && (r == dst) ) begin
         reg_latency[r]     <= latency;
         pending[r]         <= 1'b1;

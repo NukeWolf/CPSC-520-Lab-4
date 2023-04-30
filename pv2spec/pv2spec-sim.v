@@ -229,6 +229,19 @@ module parc_sim;
 
       $write( "|" );
 
+      // Issue Stage
+
+      if ( proc.ctrl.bubble_Ihl )
+        $write( "  (-_-) " );
+      else if ( proc.ctrl.squash_Ihl )
+        $write( "-%s-", proc.ctrl.inst_msg_disasm_I.minidasm );
+      else if ( proc.ctrl.stall_Ihl )
+        $write( "#%s ", proc.ctrl.inst_msg_disasm_I.minidasm );
+      else
+        $write( " %s ", proc.ctrl.inst_msg_disasm_I.minidasm );
+
+      $write( "|" );
+
       // Execute Stage
 
       if ( proc.ctrl.bubble_Xhl )

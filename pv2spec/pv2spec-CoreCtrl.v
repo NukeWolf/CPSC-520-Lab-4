@@ -582,13 +582,15 @@ module parc_CoreCtrl
 
   // Aggregate Stall Signal
 
-  wire stall_spec_Dhl = 0;
+  wire stall_spec_Dhl = 0;//inst_val_Ihl && (br_sel_Ihl != br_none);
 
+  wire stall_write_inst_in_issue_Dhl = inst_val_Ihl && rf_wen_Ihl && ((rs_en_Dhl && (inst_rs_Dhl == rf_waddr_Ihl)) || (rt_en_Dhl && (inst_rt_Dhl == rf_waddr_Ihl)));
   assign non_sb_stall_Dhl = ( stall_Ihl ||
                        stall_spec_Dhl ||
                       (inst_val_Dhl && !rob_req_rdy_Dhl));
 
-  assign stall_Dhl = non_sb_stall_Dhl;
+  assign stall_Dhl = non_sb_stall_Dhl || stall_write_inst_in_issue_Dhl || (inst_val_Dhl && stall_sb_Dhl);
+  wire stall_sb_Dhl; // For Muldiv and Memory hazzards.
 
   // Next bubble bit
 
@@ -673,7 +675,7 @@ module parc_CoreCtrl
   // Stall Signal
 
   assign non_sb_stall_Ihl = stall_Xhl;
-  assign stall_Ihl = non_sb_stall_Ihl || (inst_val_Ihl && stall_sb_Ihl);
+  assign stall_Ihl = non_sb_stall_Ihl || (inst_val_Ihl && stall_sb_Ihl );
 
   // Next bubble bit
 
@@ -717,7 +719,7 @@ module parc_CoreCtrl
     .reset               (reset),
     .src0                (inst_rs_Ihl),         // need Ihl ++
     .src0_en             (rs_en_Ihl),           // need Ihl ++
-    .src1                (inst_rs_Ihl),         // need Ihl ++
+    .src1                (inst_rt_Ihl),         // need Ihl ++
     .src1_en             (rt_en_Ihl),           // need Ihl ++
     .dst                 (rf_waddr_Ihl),        // need Ihl +
     .dst_en              (rf_wen_Ihl),          // need Ihl +
@@ -732,13 +734,21 @@ module parc_CoreCtrl
 
     .stalls              (stalls_combined),     // +
 
+    .src0_byp_Dhl        (inst_rs_Dhl),
+    .src0_byp_en_Dhl     (rs_en_Dhl),
     .src0_byp_mux_sel    (op0_byp_mux_sel_Dhl), // output, correct? --> check how it's calculated --> i think it's actually okay 
     .src0_byp_rob_slot   (op0_byp_rob_slot_Dhl),
     
+    .src1_byp_Dhl        (inst_rt_Dhl),
+    .src1_byp_en_Dhl     (rt_en_Dhl),
+
     .src1_byp_mux_sel    (op1_byp_mux_sel_Dhl), // output, correct?
     .src1_byp_rob_slot   (op1_byp_rob_slot_Dhl),
 
-    .stall_hazard        (stall_sb_Ihl),        // + --> check how it's calculated --> calculated by whether you accept or not
+    .stall_hazard_Ihl     (stall_sb_Ihl),        // + --> check how it's calculated --> calculated by whether you accept or not
+    .inst_val_Dhl         (inst_val_Dhl),
+    .stall_hazard_Dhl     (stall_sb_Dhl),
+
     .wb_mux_sel          (wb_mux_sel_Whl)       // +
   );
 
