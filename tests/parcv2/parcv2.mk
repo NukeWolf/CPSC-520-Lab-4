@@ -40,5 +40,5 @@ parcv2_srcs += \
   parcv2-remu.S \
   parcv2-custom.S \
   parcv2-ooo.S \
-#  parcv2-mfc0.S \
-
+  parcv2-rob-byp.S \
+  parcv2-waw.S \

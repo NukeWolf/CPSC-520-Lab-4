@@ -96,6 +96,7 @@ tests = \
   parcv2-custom.vmh \
   parcv2-ooo.vmh \
   parcv2-rob-byp.vmh \
+  parcv2-waw.vmh \
 
 pv2byp_rtl_sim = pv2byp-sim
 pv2byp_rtl_rand_sim = pv2byp-randdelay-sim
