@@ -1267,7 +1267,7 @@ module parc_CoreCtrl
 
         // Count instructions for every cycle not squashed or stalled
 
-        if ( inst_val_Dhl && !stall_Dhl ) begin
+        if ( inst_val_Ihl && !stall_hl ) begin
           num_inst = num_inst + 1;
         end
 
